@@ -1,9 +1,9 @@
 <footer>
   <div class="footer-text-wrapper">
     <p class="disclaimer-text">
-      This app uses several AI technologies to analyze feline facial
-      expressions. It may make mistakes and is not a substitute for professional
-      veterinary advice.<br /><br />
+      Cat-face-app uses AI technologies to analyze feline facial expressions. It
+      may make mistakes and is not a substitute for professional veterinary
+      advice.<br /><br />
     </p>
     <p class="footer-text">
       &copy; {new Date().getFullYear()} cat-face-app. All rights reserved.
@@ -16,7 +16,8 @@
     width: 100%;
     justify-content: center;
     align-items: center;
-    padding-bottom: 1rem;
+    padding: 1rem 20px;
+    margin-top: var(--spacing-xlarge);
   }
 
   .footer-text-wrapper {

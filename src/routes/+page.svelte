@@ -1,11 +1,14 @@
 <script>
-  import { onMount } from "svelte";
-  import { onDestroy } from "svelte";
+  import { onMount, onDestroy } from "svelte";
   import * as tf from "@tensorflow/tfjs";
   import * as cocoSsd from "@tensorflow-models/coco-ssd";
 
   import Logo from "$lib/elements/Logo.svelte";
   import CatFace from "$lib/elements/CatFace.svelte";
+
+  // Pain threshold constants
+  const MARKED_PAIN_THRESHOLD = 70;
+  const MODERATE_PAIN_THRESHOLD = 40;
 
   let model = $state(null);
   let catDetectionModel = $state(null);
@@ -16,6 +19,8 @@
   let catCroppedPreview = $state("");
   let catPainDiagnosis = $state("");
   let isProcessing = $state(false);
+
+  $inspect(catPainDiagnosis);
 
   $effect(() => {
     if (uploadedImageFile) {
@@ -40,6 +45,18 @@
   function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
+      // Validate file size (e.g. max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image too large. Please upload an image under 5MB.");
+        return;
+      }
+
+      // Validate file type
+      if (!["image/jpeg", "image/png", "image/heif"].includes(file.type)) {
+        alert("Invalid file type. Please upload a JPEG, PNG or HEIF image.");
+        return;
+      }
+
       if (imagePreviewUrl) {
         // Revoke the previous object URL to prevent memory leaks
         URL.revokeObjectURL(imagePreviewUrl);
@@ -123,6 +140,7 @@
               // Make prediction using your existing model
               const prediction = model.predict(tensor);
               const predictionArray = await prediction.data();
+              prediction.dispose();
 
               // Dispose of the tensor since it's no longer needed
               tensor.dispose();
@@ -141,10 +159,12 @@
               // Determine the final result
               let finalMessage =
                 "😻 Your cat seems comfortable, but for accuracy, try analyzing a few more photos.";
-              if (markedlyPresentPercentage >= 70) {
+              if (markedlyPresentPercentage >= MARKED_PAIN_THRESHOLD) {
                 finalMessage =
                   "😿 Your cat appears to be in significant pain. If this result is consistent across multiple photos, consider consulting your vet.";
-              } else if (moderatelyPresentPercentage >= 30) {
+              } else if (
+                moderatelyPresentPercentage >= MODERATE_PAIN_THRESHOLD
+              ) {
                 finalMessage =
                   "😼 Your cat appears to be in mild pain. If this result is consistent across multiple photos, consider consulting your vet.";
               }
@@ -173,7 +193,9 @@
 <section class="main-section">
   <div class="main-container">
     <div class="logo-wrapper"><Logo size={32} /></div>
-    <div class="welcome-text"><h1>Analyze your cat's comfort level using AI</h1></div>
+    <div class="welcome-text">
+      <h1>Analyze your cat's comfort level using AI</h1>
+    </div>
 
     <!-- Hidden file input -->
     <input
