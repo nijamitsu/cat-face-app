@@ -20,7 +20,7 @@
   let catPainDiagnosis = $state("");
   let isProcessing = $state(false);
 
-  $inspect(catPainDiagnosis);
+  /* $inspect(catPainDiagnosis); */
 
   $effect(() => {
     if (uploadedImageFile) {
@@ -32,7 +32,6 @@
   onMount(async () => {
     model = await tf.loadLayersModel("tm-my-image-model/model.json");
     catDetectionModel = await cocoSsd.load();
-    console.log("Model loaded");
   });
 
   onDestroy(() => {
@@ -145,7 +144,7 @@
               // Dispose of the tensor since it's no longer needed
               tensor.dispose();
 
-              console.log(predictionArray);
+              /* console.log(predictionArray); */
 
               // Calculate percentage for each class
               const absentPercentage = (predictionArray[0] * 100).toFixed(2);
@@ -237,7 +236,7 @@
             {#if navigator.maxTouchPoints > 0}
               Tap to take a photo or upload one
             {:else}
-              Click or drag your photo here
+              Click or drop your photo here
             {/if}
           </button>
         {/if}
