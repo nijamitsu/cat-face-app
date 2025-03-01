@@ -173,7 +173,7 @@
 <section class="main-section">
   <div class="main-container">
     <div class="logo-wrapper"><Logo size={32} /></div>
-    <div class="welcome-text"><h1>Is your cat in pain?</h1></div>
+    <div class="welcome-text"><h1>Analyze your cat's comfort level using AI</h1></div>
 
     <!-- Hidden file input -->
     <input
@@ -253,7 +253,7 @@
   .main-container {
     width: 100%;
     max-width: 400px;
-    margin-top: 30px;
+    margin-top: 20px;
   }
 
   .logo-wrapper {
@@ -263,6 +263,7 @@
 
   .welcome-text {
     margin-top: 20px;
+    text-align: center;
   }
 
   .image-upload-wrapper {
