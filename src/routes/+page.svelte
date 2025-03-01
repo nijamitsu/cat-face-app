@@ -1,18 +1,20 @@
 <script>
   import { onMount } from "svelte";
+  import { onDestroy } from "svelte";
   import * as tf from "@tensorflow/tfjs";
   import * as cocoSsd from "@tensorflow-models/coco-ssd";
+
   import Logo from "$lib/elements/Logo.svelte";
+  import CatFace from "$lib/elements/CatFace.svelte";
 
   let model = $state(null);
   let catDetectionModel = $state(null);
+  let fileInput = $state();
   let uploadedImageFile = $state(null);
-  let catPainDiagnosis = $state("");
   let imagePreviewUrl = $state("");
   let catDetectionPreview = $state("");
   let catCroppedPreview = $state("");
-  let fileInput = $state();
-
+  let catPainDiagnosis = $state("");
   let isProcessing = $state(false);
 
   $effect(() => {
@@ -28,10 +30,20 @@
     console.log("Model loaded");
   });
 
+  onDestroy(() => {
+    if (imagePreviewUrl) {
+      URL.revokeObjectURL(imagePreviewUrl);
+    }
+  });
+
   // Handle the file input change
   function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
+      if (imagePreviewUrl) {
+        // Revoke the previous object URL to prevent memory leaks
+        URL.revokeObjectURL(imagePreviewUrl);
+      }
       uploadedImageFile = file;
       imagePreviewUrl = URL.createObjectURL(file);
       catDetectionPreview = "";
@@ -98,16 +110,22 @@
               catCroppedPreview = croppedCanvas.toDataURL();
 
               // Convert cropped image to tensor
-              const tensor = tf.browser
-                .fromPixels(croppedCanvas)
-                .resizeNearestNeighbor([224, 224])
-                .toFloat()
-                .div(tf.scalar(255))
-                .expandDims(0);
+              const tensor = tf.tidy(() => {
+                const tensorData = tf.browser
+                  .fromPixels(croppedCanvas)
+                  .resizeNearestNeighbor([224, 224])
+                  .toFloat()
+                  .div(tf.scalar(255))
+                  .expandDims(0);
+                return tensorData;
+              });
 
               // Make prediction using your existing model
               const prediction = model.predict(tensor);
               const predictionArray = await prediction.data();
+
+              // Dispose of the tensor since it's no longer needed
+              tensor.dispose();
 
               console.log(predictionArray);
 
@@ -122,13 +140,13 @@
 
               // Determine the final result
               let finalMessage =
-                "😺 Your cat does not appear to be in pain. To be certain, try uploading a few more photos.";
+                "😻 Your cat does not appear to be in pain. To be certain, try analyzing a few more photos.";
               if (markedlyPresentPercentage >= 70) {
                 finalMessage =
                   "😿 Your cat appear to be in significant pain. If you consistently get this result with multiple photos, consider consulting your vet.";
               } else if (moderatelyPresentPercentage >= 30) {
                 finalMessage =
-                  "🐱 Your cat appear to be in mild pain. If you consistently get this result with multiple photos, consider consulting your vet.";
+                  "😼 Your cat appear to be in mild pain. If you consistently get this result with multiple photos, consider consulting your vet.";
               }
 
               // Store the result for UI display
@@ -166,30 +184,38 @@
       style="display: none;"
     />
 
-    <!-- Droppable & clickable upload area -->
+    <!-- Droppable & clickable upload area with mutual wrapping div for dynamic borders -->
     <div class="image-upload-wrapper">
-      {#if imagePreviewUrl}
-        <button
-          class="image-upload-preview-button"
-          onclick={() => fileInput.click()}
-        >
-          <img
-            class="preview-image {isProcessing ? 'processing' : ''}"
-            src={imagePreviewUrl}
-            alt="Upload preview"
-          />
-        </button>
-      {:else}
-        <button
-          class="image-upload-dragdrop-area-button"
-          onclick={() => fileInput.click()}
-          ondragover={(e) => e.preventDefault()}
-          ondrop={handleFileUpload}
-          tabindex="0"
-        >
-          <p>Click or drop your image here</p>
-        </button>
-      {/if}
+      <div class="upload-area {imagePreviewUrl ? 'uploaded' : 'not-uploaded'}">
+        {#if imagePreviewUrl}
+          <button
+            class="image-upload-preview-button"
+            onclick={() => fileInput.click()}
+          >
+            <img
+              class={`uploaded-image${isProcessing ? " processing" : ""}`}
+              src={catDetectionPreview || imagePreviewUrl}
+              alt={catDetectionPreview
+                ? "Cat detection preview"
+                : "Upload preview"}
+            />
+          </button>
+        {:else}
+          <button
+            class="image-upload-dragdrop-area-button"
+            onclick={() => fileInput.click()}
+            ondragover={(e) => e.preventDefault()}
+            ondrop={handleFileUpload}
+            tabindex="0"
+          >
+            <div class="cat-face-svg-wrapper">
+              <CatFace />
+            </div>
+
+            Click or drop your image here
+          </button>
+        {/if}
+      </div>
       <button
         class="analyze-button"
         onclick={processImage}
@@ -199,20 +225,7 @@
       </button>
     </div>
 
-    <div>
-      <!-- COCO-SSD Cat Detection Preview -->
-      {#if catDetectionPreview}
-        <div>
-          <img
-            class="image-cat-detection-preview"
-            src={catDetectionPreview}
-            alt="Cat detection preview"
-          />
-        </div>
-      {/if}
-    </div>
-
-    <div>
+    <div class="catPainDiagnosis-message-div">
       {#if catPainDiagnosis.message}
         <p>{catPainDiagnosis.message}</p>
       {/if}
@@ -224,6 +237,7 @@
   .main-section {
     max-width: 800px;
     margin: 0 auto;
+    flex: 1;
     padding: 0 20px;
     display: flex;
     flex-direction: column;
@@ -232,7 +246,7 @@
   }
 
   .main-container {
-    max-width: 300px;
+    max-width: 400px;
     margin-top: 30px;
   }
 
@@ -242,63 +256,82 @@
   }
 
   .welcome-text {
-    text-align: center;
     margin-top: 20px;
   }
 
   .image-upload-wrapper {
-    max-width: 300px;
     display: flex;
     flex-direction: column;
     gap: 10px;
   }
 
-  .image-upload-dragdrop-area-button {
-    background: none;
-    width: 300px;
-    height: 300px;
-    border: 2px dashed grey;
+  /* Mutual wrapping div styles */
+
+  .upload-area {
+    width: 400px;
+    height: 400px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
+    border: 2px grey;
     border-radius: 10px;
   }
 
-  .image-upload-dragdrop-area-button:hover {
-    border: 2px solid grey;
-  }
-
-  .preview-image {
-    width: 300px;
-    height: 300px;
-    object-fit: contain;
-    cursor: pointer;
-    border-radius: 10px;
-    border: 2px solid grey;
-  }
-
-  .preview-image:hover {
-    filter: brightness(1.05);
+  .upload-area:hover {
+    border-color: var(--color-primary);
     box-shadow: 0 0 10px 2px #c0c0c033;
-    border: 2px dashed grey;
   }
 
-  .image-upload-preview-button {
-    display: inline-block;
-    padding: 0;
+  /* Define border style based on state */
+  .upload-area.not-uploaded {
+    border-style: dashed;
+  }
+  .upload-area.uploaded {
+    border-style: solid;
+    border-color: var(--color-primary);
+  }
+
+  .upload-area.uploaded:hover {
+    border-style: dashed;
+  }
+
+  .upload-area button {
+    width: 100%;
+    height: 100%;
     border: none;
+    padding: 0;
     background: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    cursor: pointer;
+    color: grey;
+  }
+
+  .upload-area button:hover {
+    color: var(--color-primary);
+  }
+
+  .upload-area:hover :global(svg path) {
+    stroke: var(--color-primary);
+  }
+
+  .upload-area:hover :global(svg circle) {
+    fill: var(--color-primary);
+  }
+
+  .uploaded-image {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    border-radius: 10px;
+  }
+
+  .cat-face-svg-wrapper {
+    width: 150px;
+    height: 150px;
+    margin: 0 auto;
   }
 
   .analyze-button {
     background: #303134;
     border: none;
     border-radius: 10px;
-    width: 300px;
     padding: 10px;
     cursor: pointer;
   }
@@ -314,23 +347,9 @@
     border: 2px solid gray;
   }
 
-  .image-cat-detection-preview {
-    width: 300px;
-    height: 300px;
-    object-fit: contain;
-    border-radius: 10px;
-    border: 2px solid transparent;
-  }
-
-  .analyze-button:disabled {
-    background: none;
-    cursor: default;
-    color: gray;
-  }
-
   /* Add these styles */
   /* Negative effect that alternates with normal appearance */
-  .preview-image.processing {
+  .uploaded-image.processing {
     animation: negativeEffect 3s infinite alternate;
   }
 
@@ -344,5 +363,9 @@
     100% {
       filter: none; /* Back to normal */
     }
+  }
+
+  .catPainDiagnosis-message-div {
+    margin-top: 20px;
   }
 </style>

@@ -1,4 +1,5 @@
 <script>
+  import Footer from "$lib/components/Footer.svelte";
   import "../app.css";
 
   /**
@@ -12,4 +13,13 @@
 
 <main>
   {@render children?.()}
+  <Footer />
 </main>
+
+<style>
+  main {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+</style>
