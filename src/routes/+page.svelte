@@ -235,6 +235,7 @@
 
 <style>
   .main-section {
+    width: 100%;
     max-width: 800px;
     margin: 0 auto;
     flex: 1;
@@ -246,6 +247,7 @@
   }
 
   .main-container {
+    width: 100%;
     max-width: 400px;
     margin-top: 30px;
   }
@@ -268,8 +270,9 @@
   /* Mutual wrapping div styles */
 
   .upload-area {
-    width: 400px;
-    height: 400px;
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 400px;
     display: flex;
     border: 2px grey;
     border-radius: 10px;
@@ -295,7 +298,6 @@
 
   .upload-area button {
     width: 100%;
-    height: 100%;
     border: none;
     padding: 0;
     background: none;
