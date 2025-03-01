@@ -140,13 +140,13 @@
 
               // Determine the final result
               let finalMessage =
-                "😻 Your cat does not appear to be in pain. To be certain, try analyzing a few more photos.";
+                "😻 Your cat seems comfortable, but for accuracy, try analyzing a few more photos.";
               if (markedlyPresentPercentage >= 70) {
                 finalMessage =
-                  "😿 Your cat appear to be in significant pain. If you consistently get this result with multiple photos, consider consulting your vet.";
+                  "😿 Your cat appears to be in significant pain. If this result is consistent across multiple photos, consider consulting your vet.";
               } else if (moderatelyPresentPercentage >= 30) {
                 finalMessage =
-                  "😼 Your cat appear to be in mild pain. If you consistently get this result with multiple photos, consider consulting your vet.";
+                  "😼 Your cat appears to be in mild pain. If this result is consistent across multiple photos, consider consulting your vet.";
               }
 
               // Store the result for UI display
@@ -157,7 +157,7 @@
                 message: finalMessage,
               };
             } else {
-              catPainDiagnosis = { message: "No cat detected in the photo!" };
+              catPainDiagnosis = { message: "No cat detected in the photo" };
             }
           } finally {
             isProcessing = false; // End animation regardless of success/failure
@@ -212,7 +212,11 @@
               <CatFace />
             </div>
 
-            Click or drop your image here
+            {#if navigator.maxTouchPoints > 0}
+              Tap to take a photo or upload one
+            {:else}
+              Click or drag your photo here
+            {/if}
           </button>
         {/if}
       </div>
@@ -272,7 +276,7 @@
   .upload-area {
     width: 100%;
     aspect-ratio: 1;
-    max-width: 400px;
+    max-height: 400px;
     display: flex;
     border: 2px grey;
     border-radius: 10px;
