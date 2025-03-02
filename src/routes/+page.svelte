@@ -6,6 +6,8 @@
   import Logo from "$lib/elements/Logo.svelte";
   import CatFace from "$lib/elements/CatFace.svelte";
 
+  import PhotoGuidelines from "$lib/components/PhotoGuidelines.svelte";
+
   // Pain threshold constants
   const MARKED_PAIN_THRESHOLD = 70;
   const MODERATE_PAIN_THRESHOLD = 40;
@@ -20,7 +22,7 @@
   let catPainDiagnosis = $state("");
   let isProcessing = $state(false);
 
-  /* $inspect(catPainDiagnosis); */
+  // $inspect(catPainDiagnosis);
 
   $effect(() => {
     if (uploadedImageFile) {
@@ -38,6 +40,14 @@
     if (imagePreviewUrl) {
       URL.revokeObjectURL(imagePreviewUrl);
     }
+
+    if (model) {
+      model.dispose();
+    }
+
+    if (catDetectionModel) {
+      catDetectionModel.dispose();
+    }
   });
 
   // Handle the file input change
@@ -46,7 +56,7 @@
     if (file) {
       // Validate file size (e.g. max 10MB)
       if (file.size > 10 * 1024 * 1024) {
-        alert("Image too large. Please upload an image under 5MB.");
+        alert("Image too large. Please upload an image under 10MB.");
         return;
       }
 
@@ -127,13 +137,12 @@
 
               // Convert cropped image to tensor
               const tensor = tf.tidy(() => {
-                const tensorData = tf.browser
+                return tf.browser
                   .fromPixels(croppedCanvas)
                   .resizeNearestNeighbor([224, 224])
                   .toFloat()
                   .div(tf.scalar(255))
                   .expandDims(0);
-                return tensorData;
               });
 
               // Make prediction using your existing model
@@ -155,17 +164,58 @@
                 predictionArray[2] * 100
               ).toFixed(2);
 
-              // Determine the final result
-              let finalMessage =
-                "😻 Your cat seems comfortable, but for accuracy, try analyzing a few more photos.";
-              if (markedlyPresentPercentage >= MARKED_PAIN_THRESHOLD) {
-                finalMessage =
-                  "😿 Your cat appears to be in significant pain. If this result is consistent across multiple photos, consider consulting your vet.";
-              } else if (
-                moderatelyPresentPercentage >= MODERATE_PAIN_THRESHOLD
+              // Define class labels
+              const classLabels = [
+                "absent",
+                "moderatelyPresent",
+                "markedlyPresent",
+              ];
+
+              // Convert percentages back to decimal probabilities
+              const probabilities = [
+                parseFloat(absentPercentage) / 100,
+                parseFloat(moderatelyPresentPercentage) / 100,
+                parseFloat(markedlyPresentPercentage) / 100,
+              ];
+
+              // Find the two highest probabilities
+              const sortedIndices = [...probabilities.keys()].sort(
+                (a, b) => probabilities[b] - probabilities[a]
+              );
+              const maxIndex = sortedIndices[0];
+              const secondMaxIndex = sortedIndices[1];
+
+              const maxProbability = probabilities[maxIndex];
+              const secondMaxProbability = probabilities[secondMaxIndex];
+              const predictedClass = classLabels[maxIndex];
+
+              // Set thresholds
+              const CONFIDENCE_THRESHOLD = 0.6;
+              const CLOSE_DIFFERENCE_THRESHOLD = 0.05; // 5% difference
+
+              // Determine the final message
+              let finalMessage;
+              if (
+                maxProbability >= CONFIDENCE_THRESHOLD &&
+                maxProbability - secondMaxProbability >=
+                  CLOSE_DIFFERENCE_THRESHOLD
               ) {
+                switch (predictedClass) {
+                  case "absent":
+                    finalMessage = "😻 Your cat seems comfortable!";
+                    break;
+                  case "moderatelyPresent":
+                    finalMessage =
+                      "😼 Your cat appears to be in mild pain. If this result is consistent across multiple photos, consider consulting your vet.";
+                    break;
+                  case "markedlyPresent":
+                    finalMessage =
+                      "😿 Your cat appears to be in significant pain. If this result is consistent across multiple photos, consider consulting your vet.";
+                    break;
+                }
+              } else {
                 finalMessage =
-                  "😼 Your cat appears to be in mild pain. If this result is consistent across multiple photos, consider consulting your vet.";
+                  "😺 The model is uncertain. Consider analyzing more photos for better accuracy.";
               }
 
               // Store the result for UI display
@@ -173,6 +223,7 @@
                 absent: absentPercentage,
                 moderatelyPresent: moderatelyPresentPercentage,
                 markedlyPresent: markedlyPresentPercentage,
+                confidence: (maxProbability * 100).toFixed(2),
                 message: finalMessage,
               };
             } else {
@@ -194,7 +245,7 @@
     <div class="logo-wrapper"><Logo size={32} /></div>
     <div class="welcome-text">
       <h1>
-        Analyze your cat's <br> comfort level using
+        Analyze your cat's <br /> comfort level using
         <span class="ai-text">AI</span>
       </h1>
     </div>
@@ -258,6 +309,8 @@
         <p>{catPainDiagnosis.message}</p>
       {/if}
     </div>
+
+    <PhotoGuidelines />
   </div>
 </section>
 
@@ -267,7 +320,7 @@
     max-width: 800px;
     margin: 0 auto;
     flex: 1;
-    padding: 0 20px;
+    padding: 0 var(--spacing-large);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -277,7 +330,7 @@
   .main-container {
     width: 100%;
     max-width: 400px;
-    margin-top: 20px;
+    margin-top: var(--spacing-large);
   }
 
   .logo-wrapper {
@@ -286,13 +339,12 @@
   }
 
   .welcome-text {
-    margin-top: 20px;
+    margin-top: var(--spacing-large);
     text-align: center;
   }
 
   .ai-text {
     position: relative;
-
   }
 
   .ai-text::after {
@@ -410,6 +462,7 @@
   }
 
   .catPainDiagnosis-message-div {
-    margin-top: 20px;
+    margin-top: var(--spacing-large);
+    margin-bottom: var(--spacing-large);
   }
 </style>
