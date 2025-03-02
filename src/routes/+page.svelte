@@ -194,11 +194,10 @@
     <div class="logo-wrapper"><Logo size={32} /></div>
     <div class="welcome-text">
       <h1>
-        Analyze your cat's comfort level using 
+        Analyze your cat's <br> comfort level using
         <span class="ai-text">AI</span>
       </h1>
     </div>
-    
 
     <!-- Hidden file input -->
     <input
@@ -292,18 +291,17 @@
   }
 
   .ai-text {
-  position: relative;
-  display: inline-block;
-}
+    position: relative;
 
-.ai-text::after {
-  content: "beta";
-  position: absolute;
-  top: -5px;
-  right: -30px;
-  font-size: 12px;
-}
+  }
 
+  .ai-text::after {
+    content: "beta";
+    position: absolute;
+    top: -5px;
+    right: -30px;
+    font-size: 12px;
+  }
 
   .image-upload-wrapper {
     display: flex;
