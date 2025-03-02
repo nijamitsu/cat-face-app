@@ -22,7 +22,7 @@
   let catPainDiagnosis = $state("");
   let isProcessing = $state(false);
 
-  // $inspect(catPainDiagnosis);
+  $inspect(catPainDiagnosis);
 
   $effect(() => {
     if (uploadedImageFile) {
@@ -190,7 +190,7 @@
               const predictedClass = classLabels[maxIndex];
 
               // Set thresholds
-              const CONFIDENCE_THRESHOLD = 0.6;
+              const CONFIDENCE_THRESHOLD = 0.7;
               const CLOSE_DIFFERENCE_THRESHOLD = 0.05; // 5% difference
 
               // Determine the final message
@@ -215,7 +215,7 @@
                 }
               } else {
                 finalMessage =
-                  "😺 The model is uncertain. Consider analyzing more photos for better accuracy.";
+                  "🤔 We're not sure. Try a different photo.";
               }
 
               // Store the result for UI display
