@@ -44,8 +44,8 @@
   function handleFileUpload(event) {
     const file = event.target.files[0];
     if (file) {
-      // Validate file size (e.g. max 5MB)
-      if (file.size > 5 * 1024 * 1024) {
+      // Validate file size (e.g. max 10MB)
+      if (file.size > 10 * 1024 * 1024) {
         alert("Image too large. Please upload an image under 5MB.");
         return;
       }
@@ -193,8 +193,12 @@
   <div class="main-container">
     <div class="logo-wrapper"><Logo size={32} /></div>
     <div class="welcome-text">
-      <h1>Analyze your cat's comfort level using AI</h1>
+      <h1>
+        Analyze your cat's comfort level using 
+        <span class="ai-text">AI</span>
+      </h1>
     </div>
+    
 
     <!-- Hidden file input -->
     <input
@@ -286,6 +290,20 @@
     margin-top: 20px;
     text-align: center;
   }
+
+  .ai-text {
+  position: relative;
+  display: inline-block;
+}
+
+.ai-text::after {
+  content: "beta";
+  position: absolute;
+  top: -5px;
+  right: -30px;
+  font-size: 12px;
+}
+
 
   .image-upload-wrapper {
     display: flex;
