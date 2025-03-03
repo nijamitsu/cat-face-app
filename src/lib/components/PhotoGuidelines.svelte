@@ -7,9 +7,11 @@
 </script>
 
 <div class="photo-guidelines-wrapper">
-  <button class="photo-guidelines-button" onclick={toggleGuidelines}>
-    See photo guidelines
-  </button>
+  <div>
+    <button class="photo-guidelines-button" onclick={toggleGuidelines}>
+      Photo guidelines
+    </button>
+  </div>
 
   {#if showGuidelines}
     <div class="photo-guidelines">
@@ -21,26 +23,37 @@
           <p>Not facing the camera</p>
           <img
             src="cat-photo-examples/not-facing-camera.jpeg"
-            alt="Not directly facing the camera"
+            alt="Cat not facing the camera"
           />
         </div>
         <div class="example">
           <p>Lying down</p>
-          <img src="cat-photo-examples/lying-down.jpeg" alt="Lying down" />
+          <img src="cat-photo-examples/lying-down.jpeg" alt="Cat lying down" />
         </div>
         <div class="example">
           <p>Too close to the camera</p>
           <img
             src="cat-photo-examples/too-close.jpeg"
-            alt="Too close to the camera"
+            alt="Cat too close to the camera"
           />
         </div>
         <div class="example">
           <p>Unusual posture</p>
           <img
             src="cat-photo-examples/unusual-posture.jpeg"
-            alt="Unusual posture"
+            alt="Cat with an unusual posture"
           />
+        </div>
+        <div class="example">
+          <p>Mouth open</p>
+          <img
+            src="cat-photo-examples/mouth-open.jpeg"
+            alt="Cat with its mouth open"
+          />
+        </div>
+        <div class="example">
+          <p>Squinting</p>
+          <img src="cat-photo-examples/squinting.jpeg" alt="Cat squinting" />
         </div>
       </div>
     </div>

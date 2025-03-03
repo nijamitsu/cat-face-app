@@ -5,12 +5,7 @@
 
   import Logo from "$lib/elements/Logo.svelte";
   import CatFace from "$lib/elements/CatFace.svelte";
-
   import PhotoGuidelines from "$lib/components/PhotoGuidelines.svelte";
-
-  // Pain threshold constants
-  const MARKED_PAIN_THRESHOLD = 70;
-  const MODERATE_PAIN_THRESHOLD = 40;
 
   let model = $state(null);
   let catDetectionModel = $state(null);
@@ -21,6 +16,7 @@
   let catCroppedPreview = $state("");
   let catPainDiagnosis = $state("");
   let isProcessing = $state(false);
+  let hasMounted = $state(false);
 
   $inspect(catPainDiagnosis);
 
@@ -32,6 +28,7 @@
 
   // Load both models when the app is mounted
   onMount(async () => {
+    hasMounted = true;
     model = await tf.loadLayersModel("tm-my-image-model/model.json");
     catDetectionModel = await cocoSsd.load();
   });
@@ -214,8 +211,7 @@
                     break;
                 }
               } else {
-                finalMessage =
-                  "🤔 We're not sure. Try a different photo.";
+                finalMessage = "🤔 We're not sure. Try a different photo.";
               }
 
               // Store the result for UI display
@@ -283,14 +279,15 @@
             ondrop={handleFileUpload}
             tabindex="0"
           >
-            <div class="cat-face-svg-wrapper">
-              <CatFace />
-            </div>
-
-            {#if navigator.maxTouchPoints > 0}
-              Tap to take a photo or upload one
-            {:else}
-              Click or drop your photo here
+            {#if hasMounted}
+              <div class="cat-face-svg-wrapper">
+                <CatFace />
+              </div>
+              {#if navigator.maxTouchPoints > 0}
+                Tap to take a photo or upload one
+              {:else}
+                Click or drop your photo here
+              {/if}
             {/if}
           </button>
         {/if}
