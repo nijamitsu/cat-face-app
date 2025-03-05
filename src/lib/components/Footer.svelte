@@ -1,11 +1,17 @@
+<script>
+  import { page } from "$app/stores";
+  import DisclaimerText from "./DisclaimerText.svelte";
+</script>
+
 <footer>
   <div class="footer-text-wrapper">
-    <p class="disclaimer-text">
-      Cat-face-app uses AI technologies to analyze feline facial expressions. It
-      may make mistakes and is not a substitute for professional veterinary
-      advice.<br /><br />
-    </p>
-    <p class="footer-text">
+    {#if $page.route.id === "/"}
+      <div class="disclaimer-text-wrapper">
+        <DisclaimerText />
+      </div>
+      <br />
+    {/if}
+    <p class="footer-copyright-text">
       &copy; {new Date().getFullYear()} cat-face-app. All rights reserved.
     </p>
   </div>
@@ -21,14 +27,7 @@
   }
 
   .footer-text-wrapper {
-    text-align: center;
-  }
-
-  .disclaimer-text {
-    font-size: 13px;
-  }
-
-  .footer-text {
     font-size: 12px;
+    text-align: center;
   }
 </style>
