@@ -55,9 +55,6 @@
 
     isProcessing = true;
 
-    // Introduce a animation delay to observe the processing animation
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
     try {
       // Create an image element to use with TensorFlow
       const img = new Image();
