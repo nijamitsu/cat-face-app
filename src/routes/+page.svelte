@@ -31,9 +31,11 @@
     "Persian", // done
     "American Bobtail",
     "Russian Blue", // done
+    "Scottish Fold", // done
     "Siamese", // done
     "Sphynx", // done
     "Tuxedo", // done
+    
   ];
 
   $effect(() => {
