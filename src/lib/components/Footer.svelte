@@ -5,7 +5,7 @@
 
 <footer>
   <div class="footer-text-wrapper">
-    {#if $page.route.id === "/"}
+    {#if $page.route.id === "/cat-pain-detector"}
       <div class="disclaimer-text-wrapper">
         <DisclaimerText />
       </div>

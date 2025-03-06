@@ -7,45 +7,167 @@
   import CatFace from "$lib/elements/CatFace.svelte";
   import PhotoGuidelines from "$lib/components/PhotoGuidelines.svelte";
 
-  let model = $state(null);
-  let catDetectionModel = $state(null);
+  let model;
+  let catDetector;
   let fileInput = $state();
   let uploadedImageFile = $state(null);
   let imagePreviewUrl = $state("");
+  let isProcessing = $state(false);
+  let predictionMessage = $state("");
+  let hasMounted = $state(false);
   let catDetectionPreview = $state("");
   let catCroppedPreview = $state("");
-  let catPainDiagnosis = $state("");
-  let isProcessing = $state(false);
-  let hasMounted = $state(false);
 
-  $inspect(catPainDiagnosis);
+  const classNames = [
+    "Abyssinian", // done
+    "Birman",
+    "American Shorthair", // getting confused with ragdoll
+    "Bengal", // done
+    "Ragdoll", // done
+    "Bombay", // done
+    "British Shorthair", // done
+    "Egyptian Mau", // done
+    "Maine Coon", // done
+    "Persian", // done
+    "American Bobtail",
+    "Russian Blue", // done
+    "Siamese", // done
+    "Sphynx", // done
+    "Tuxedo", // done
+  ];
 
   $effect(() => {
     if (uploadedImageFile) {
-      catPainDiagnosis = "";
+      predictionMessage = "";
     }
   });
 
-  // Load both models when the app is mounted
+  // Load the models only after the component is mounted on the client-side
   onMount(async () => {
     hasMounted = true;
-    model = await tf.loadLayersModel("tm-my-image-model/model.json");
-    catDetectionModel = await cocoSsd.load();
+    model = await tf.loadGraphModel("cat-breed-identify-tfjs_model/model.json");
+    catDetector = await cocoSsd.load();
   });
 
-  onDestroy(() => {
-    if (imagePreviewUrl) {
-      URL.revokeObjectURL(imagePreviewUrl);
+  async function processImage() {
+    if (!uploadedImageFile || !model || !catDetector) {
+      console.error("Image or models not loaded!");
+      return;
     }
 
-    if (model) {
-      model.dispose();
+    isProcessing = true;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    try {
+      // Create an image element to use with TensorFlow and coco-ssd
+      const img = new Image();
+      img.src = imagePreviewUrl;
+
+      await new Promise((resolve) => {
+        img.onload = resolve;
+      });
+
+      // Create a canvas to draw the image for detection
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0);
+
+      // Use coco-ssd to detect cat in the image
+      const predictions = await catDetector.detect(canvas);
+      const catPrediction = predictions.find((pred) => pred.class === "cat");
+
+      if (!catPrediction) {
+        predictionMessage =
+          "No cat detected in the image. Please try another photo.";
+        return;
+      }
+
+      // Extract and adjust the bounding box with 5% padding
+      const [x, y, width, height] = catPrediction.bbox;
+      const padX = width * 0.05;
+      const padY = height * 0.05;
+      const newX = Math.max(0, x - padX);
+      const newY = Math.max(0, y - padY);
+      const newWidth = Math.min(img.width - newX, width + padX * 2);
+      const newHeight = Math.min(img.height - newY, height + padY * 2);
+
+      // Draw the detection box on the original canvas
+      ctx.strokeStyle = "red";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(newX, newY, newWidth, newHeight);
+
+      // Store the detection preview (canvas with overlay)
+      catDetectionPreview = canvas.toDataURL();
+
+      // Create a temporary canvas to crop the detected cat area
+      const tempCanvas = document.createElement("canvas");
+      tempCanvas.width = newWidth;
+      tempCanvas.height = newHeight;
+      const tempCtx = tempCanvas.getContext("2d");
+      tempCtx.drawImage(
+        canvas,
+        newX,
+        newY,
+        newWidth,
+        newHeight,
+        0,
+        0,
+        newWidth,
+        newHeight
+      );
+
+      // Store the cropped image preview
+      catCroppedPreview = tempCanvas.toDataURL();
+
+      // Process the cropped image with the breed model
+      const result = await predictCatBreed(tempCanvas);
+
+      // Update the UI with the results
+      const article = "aeiou".includes(
+        result.predictedClassName[0].toLowerCase()
+      )
+        ? "an"
+        : "a";
+      predictionMessage = `This cat appears to be ${article} ${result.predictedClassName} (${Math.round(
+        result.predictedClassProbability * 100
+      )}% confidence).`;
+    } catch (error) {
+      console.error("Error processing image:", error);
+      predictionMessage = "Error analyzing the image. Please try again.";
+    } finally {
+      isProcessing = false;
+    }
+  }
+
+  // Helper function to process the image with the model
+  async function predictCatBreed(image) {
+    if (!model) {
+      console.error("Model is not loaded yet!");
+      throw new Error("Model not loaded");
     }
 
-    if (catDetectionModel) {
-      catDetectionModel.dispose();
-    }
-  });
+    const imgTensor = tf.browser
+      .fromPixels(image)
+      .resizeNearestNeighbor([224, 224]) // Resize to model input size
+      .toFloat()
+      .expandDims();
+
+    const prediction = model.predict(imgTensor);
+    const result = await prediction.data();
+
+    // Find the index of the highest value
+    const predictedClassIndex = result.indexOf(Math.max(...result));
+    const predictedClassName = classNames[predictedClassIndex];
+    const predictedClassProbability = result[predictedClassIndex];
+
+    // Clean up tensors to prevent memory leaks
+    imgTensor.dispose();
+    prediction.dispose();
+
+    return { predictedClassName, predictedClassProbability };
+  }
 
   // Handle the file input change
   function handleFileUpload(event) {
@@ -64,174 +186,12 @@
       }
 
       if (imagePreviewUrl) {
-        // Revoke the previous object URL to prevent memory leaks
         URL.revokeObjectURL(imagePreviewUrl);
       }
       uploadedImageFile = file;
       imagePreviewUrl = URL.createObjectURL(file);
       catDetectionPreview = "";
       catCroppedPreview = "";
-    }
-  }
-
-  // Process the image and make predictions
-  async function processImage() {
-    if (uploadedImageFile && model && catDetectionModel) {
-      isProcessing = true; // Start animation
-
-      const reader = new FileReader();
-      reader.onload = async (e) => {
-        const img = new Image();
-        img.onload = async () => {
-          try {
-            // Create canvas to detect objects
-            const canvas = document.createElement("canvas");
-            const ctx = canvas.getContext("2d");
-            canvas.width = img.width;
-            canvas.height = img.height;
-            ctx.drawImage(img, 0, 0);
-
-            // Detect cat
-            const predictions = await catDetectionModel.detect(canvas);
-            const cat = predictions.find((p) => p.class === "cat");
-
-            if (cat) {
-              let [x, y, width, height] = cat.bbox;
-
-              // Expand bounding box to capture whole cat including ears
-              const padding = 0.05; // 5% padding
-              const expandX = width * padding;
-              const expandY = height * padding;
-
-              x = Math.max(0, x - expandX);
-              y = Math.max(0, y - expandY);
-              width = Math.min(img.width - x, width + 2 * expandX);
-              height = Math.min(img.height - y, height + 2 * expandY);
-
-              // Draw detection rectangle on the original canvas
-              ctx.strokeStyle = "red";
-              ctx.lineWidth = 4;
-              ctx.strokeRect(x, y, width, height);
-              catDetectionPreview = canvas.toDataURL();
-
-              // Crop the detected cat using the expanded bounding box
-              const croppedCanvas = document.createElement("canvas");
-              const croppedCtx = croppedCanvas.getContext("2d");
-              croppedCanvas.width = width;
-              croppedCanvas.height = height;
-              croppedCtx.drawImage(
-                img,
-                x,
-                y,
-                width,
-                height,
-                0,
-                0,
-                width,
-                height
-              );
-              catCroppedPreview = croppedCanvas.toDataURL();
-
-              // Convert cropped image to tensor
-              const tensor = tf.tidy(() => {
-                return tf.browser
-                  .fromPixels(croppedCanvas)
-                  .resizeNearestNeighbor([224, 224])
-                  .toFloat()
-                  .div(tf.scalar(255))
-                  .expandDims(0);
-              });
-
-              // Make prediction using your existing model
-              const prediction = model.predict(tensor);
-              const predictionArray = await prediction.data();
-              prediction.dispose();
-
-              // Dispose of the tensor since it's no longer needed
-              tensor.dispose();
-
-              /* console.log(predictionArray); */
-
-              // Calculate percentage for each class
-              const absentPercentage = (predictionArray[0] * 100).toFixed(2);
-              const moderatelyPresentPercentage = (
-                predictionArray[1] * 100
-              ).toFixed(2);
-              const markedlyPresentPercentage = (
-                predictionArray[2] * 100
-              ).toFixed(2);
-
-              // Define class labels
-              const classLabels = [
-                "absent",
-                "moderatelyPresent",
-                "markedlyPresent",
-              ];
-
-              // Convert percentages back to decimal probabilities
-              const probabilities = [
-                parseFloat(absentPercentage) / 100,
-                parseFloat(moderatelyPresentPercentage) / 100,
-                parseFloat(markedlyPresentPercentage) / 100,
-              ];
-
-              // Find the two highest probabilities
-              const sortedIndices = [...probabilities.keys()].sort(
-                (a, b) => probabilities[b] - probabilities[a]
-              );
-              const maxIndex = sortedIndices[0];
-              const secondMaxIndex = sortedIndices[1];
-
-              const maxProbability = probabilities[maxIndex];
-              const secondMaxProbability = probabilities[secondMaxIndex];
-              const predictedClass = classLabels[maxIndex];
-
-              // Set thresholds
-              const CONFIDENCE_THRESHOLD = 0.7;
-              const CLOSE_DIFFERENCE_THRESHOLD = 0.05; // 5% difference
-
-              // Determine the final message
-              let finalMessage;
-              if (
-                maxProbability >= CONFIDENCE_THRESHOLD &&
-                maxProbability - secondMaxProbability >=
-                  CLOSE_DIFFERENCE_THRESHOLD
-              ) {
-                switch (predictedClass) {
-                  case "absent":
-                    finalMessage = "😻 Your cat seems comfortable!";
-                    break;
-                  case "moderatelyPresent":
-                    finalMessage =
-                      "😼 Your cat appears to be in mild pain. If this result is consistent across multiple photos, consider consulting your vet.";
-                    break;
-                  case "markedlyPresent":
-                    finalMessage =
-                      "😿 Your cat appears to be in significant pain. If this result is consistent across multiple photos, consider consulting your vet.";
-                    break;
-                }
-              } else {
-                finalMessage = "🤔 We're not sure. Try a different photo.";
-              }
-
-              // Store the result for UI display
-              catPainDiagnosis = {
-                absent: absentPercentage,
-                moderatelyPresent: moderatelyPresentPercentage,
-                markedlyPresent: markedlyPresentPercentage,
-                confidence: (maxProbability * 100).toFixed(2),
-                message: finalMessage,
-              };
-            } else {
-              catPainDiagnosis = { message: "No cat detected in the photo" };
-            }
-          } finally {
-            isProcessing = false; // End animation regardless of success/failure
-          }
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(uploadedImageFile);
     }
   }
 </script>
@@ -241,7 +201,7 @@
     <div class="logo-wrapper"><Logo size={32} /></div>
     <div class="welcome-text">
       <h1>
-        Analyze your cat's <br /> comfort level using
+        Identify cat breeds using
         <span class="ai-text">AI</span>
       </h1>
     </div>
@@ -295,19 +255,17 @@
       <button
         class="analyze-button"
         onclick={processImage}
-        disabled={!imagePreviewUrl || catPainDiagnosis.message || isProcessing}
+        disabled={!imagePreviewUrl || predictionMessage || isProcessing}
       >
         {isProcessing ? "Processing..." : "Analyze"}
       </button>
     </div>
 
     <div class="catPainDiagnosis-message-div">
-      {#if catPainDiagnosis.message}
-        <p>{catPainDiagnosis.message}</p>
+      {#if predictionMessage}
+        <p>{predictionMessage}</p>
       {/if}
     </div>
-
-    <PhotoGuidelines />
   </div>
 </section>
 
