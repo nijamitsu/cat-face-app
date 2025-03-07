@@ -35,7 +35,6 @@
     "Siamese", // done
     "Sphynx", // done
     "Tuxedo", // done
-    
   ];
 
   $effect(() => {
@@ -127,14 +126,20 @@
       const result = await predictCatBreed(tempCanvas);
 
       // Update the UI with the results
-      const article = "aeiou".includes(
-        result.predictedClassName[0].toLowerCase()
-      )
-        ? "an"
-        : "a";
-      predictionMessage = `This cat appears to be ${article} ${result.predictedClassName} (${Math.round(
-        result.predictedClassProbability * 100
-      )}% confidence).`;
+      if (result.predictedClassProbability < 0.55) {
+        predictionMessage = `I don't know this breed yet—check back later! (${Math.round(
+          result.predictedClassProbability * 100
+        )}% confidence).`;
+      } else {
+        const article = "aeiou".includes(
+          result.predictedClassName[0].toLowerCase()
+        )
+          ? "an"
+          : "a";
+        predictionMessage = `This cat appears to be ${article} ${result.predictedClassName} (${Math.round(
+          result.predictedClassProbability * 100
+        )}% confidence).`;
+      }
     } catch (error) {
       console.error("Error processing image:", error);
       predictionMessage = "Error analyzing the image. Please try again.";
@@ -173,7 +178,10 @@
 
   // Handle the file input change
   function handleFileUpload(event) {
-    const file = event.target.files[0];
+    event.preventDefault();
+    const file = event.dataTransfer
+      ? event.dataTransfer.files[0]
+      : event.target.files[0];
     if (file) {
       // Validate file size (e.g. max 10MB)
       if (file.size > 10 * 1024 * 1024) {
@@ -224,6 +232,19 @@
           <button
             class="image-upload-preview-button"
             onclick={() => fileInput.click()}
+            ondragover={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }}
+            ondragenter={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }}
+            ondragleave={(e) => e.preventDefault()}
+            ondrop={(e) => {
+              e.preventDefault();
+              handleFileUpload(e);
+            }}
           >
             <img
               class={`uploaded-image${isProcessing ? " processing" : ""}`}
@@ -237,8 +258,21 @@
           <button
             class="image-upload-dragdrop-area-button"
             onclick={() => fileInput.click()}
-            ondragover={(e) => e.preventDefault()}
-            ondrop={handleFileUpload}
+            ondragover={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }}
+            ondragenter={(e) => {
+              e.preventDefault();
+              e.dataTransfer.dropEffect = "copy";
+            }}
+            ondragleave={(e) => {
+              e.preventDefault();
+            }}
+            ondrop={(e) => {
+              e.preventDefault();
+              handleFileUpload(e);
+            }}
             tabindex="0"
           >
             {#if hasMounted}
