@@ -1,38 +1,22 @@
-# sv
+An experimental AI-powered web app that I made to detect cat breeds from photos. Built with modern web tools and machine learning, this project explores client-side image classification using a custom-trained model.
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+Features
+Upload a cat photo to identify its breed
+Real-time cat face detection using COCO-SSD
+Custom image recognition model I trained on Google Colab GPUs
+Fully browser-based, no server required
 
-## Creating a project
+Built With
+HTML, CSS, JavaScript (Svelte) - UI & interaction
+TensorFlow.js - Model loading & inference
+COCO-SSD - Cat face detection
+Google Colab - Model training with GPU acceleration
 
-If you're seeing this, you've probably already done this step. Congrats!
+How It Works
+Upload or take a photo of a cat
+The app detects the cat's face using COCO-SSD
+A custom-trained TensorFlow model classifies the breed
+Results are shown instantly in the browser
 
-```bash
-# create a new project in the current directory
-npx sv create
-
-# create a new project in my-app
-npx sv create my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
-```
-
-## Building
-
-To create a production version of your app:
-
-```bash
-npm run build
-```
-
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Disclaimer
+This is an experimental project. Accuracy may vary depending on photo quality and breed coverage in the training data.
