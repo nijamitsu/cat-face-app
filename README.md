@@ -12,6 +12,12 @@ TensorFlow.js - Model loading & inference
 COCO-SSD - Cat face detection
 Google Colab - Model training with GPU acceleration
 
+Dataset:
+This app was trained on the Kaggle Cat Breeds Dataset (https://www.kaggle.com/datasets/denispotapov/cat-breeds-dataset-cleared), which I cleaned and augmented by:
+Removing low-resolution and duplicate images.
+Adding more cat images sourced from Wikimedia and Flickr to enhance model diversity and robustness.
+Ensuring a balanced dataset to improve model accuracy.
+
 How It Works:
 Upload or take a photo of a cat
 The app detects the cat's face using COCO-SSD
