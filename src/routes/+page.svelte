@@ -15,6 +15,7 @@
   let isProcessing = $state(false);
   let predictionMessage = $state("");
   let hasMounted = $state(false);
+  let isLoading = $state(true);
   let catDetectionPreview = $state("");
   let catCroppedPreview = $state("");
 
@@ -48,6 +49,7 @@
     hasMounted = true;
     model = await tf.loadGraphModel("cat-breed-identify-tfjs_model/model.json");
     catDetector = await cocoSsd.load();
+    isLoading = false;
   });
 
   async function processImage() {
@@ -216,92 +218,102 @@
       </h1>
     </div>
 
-    <!-- Hidden file input -->
-    <input
-      type="file"
-      accept="image/png, image/jpeg, image/heif"
-      onchange={handleFileUpload}
-      bind:this={fileInput}
-      style="display: none;"
-    />
+    {#if isLoading}
+      <div class="loading">
+        Loading AI models<span class="dots"
+          ><span>.</span><span>.</span><span>.</span></span
+        >
+      </div>
+    {:else}
+      <!-- Hidden file input -->
+      <input
+        type="file"
+        accept="image/png, image/jpeg, image/heif"
+        onchange={handleFileUpload}
+        bind:this={fileInput}
+        style="display: none;"
+      />
 
-    <!-- Droppable & clickable upload area with mutual wrapping div for dynamic borders -->
-    <div class="image-upload-wrapper">
-      <div class="upload-area {imagePreviewUrl ? 'uploaded' : 'not-uploaded'}">
-        {#if imagePreviewUrl}
-          <button
-            class="image-upload-preview-button"
-            onclick={() => fileInput.click()}
-            ondragover={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "copy";
-            }}
-            ondragenter={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "copy";
-            }}
-            ondragleave={(e) => e.preventDefault()}
-            ondrop={(e) => {
-              e.preventDefault();
-              handleFileUpload(e);
-            }}
-          >
-            <img
-              class={`uploaded-image${isProcessing ? " processing" : ""}`}
-              src={catDetectionPreview || imagePreviewUrl}
-              alt={catDetectionPreview
-                ? "Cat detection preview"
-                : "Upload preview"}
-            />
-          </button>
-        {:else}
-          <button
-            class="image-upload-dragdrop-area-button"
-            onclick={() => fileInput.click()}
-            ondragover={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "copy";
-            }}
-            ondragenter={(e) => {
-              e.preventDefault();
-              e.dataTransfer.dropEffect = "copy";
-            }}
-            ondragleave={(e) => {
-              e.preventDefault();
-            }}
-            ondrop={(e) => {
-              e.preventDefault();
-              handleFileUpload(e);
-            }}
-            tabindex="0"
-          >
-            {#if hasMounted}
-              <div class="cat-face-svg-wrapper">
-                <CatFace />
-              </div>
-              {#if navigator.maxTouchPoints > 0}
-                Tap to take a photo or upload one
-              {:else}
-                Click or drop your photo here
+      <!-- Droppable & clickable upload area -->
+      <div class="image-upload-wrapper">
+        <div
+          class="upload-area {imagePreviewUrl ? 'uploaded' : 'not-uploaded'}"
+        >
+          {#if imagePreviewUrl}
+            <button
+              class="image-upload-preview-button"
+              onclick={() => fileInput.click()}
+              ondragover={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+              }}
+              ondragenter={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+              }}
+              ondragleave={(e) => e.preventDefault()}
+              ondrop={(e) => {
+                e.preventDefault();
+                handleFileUpload(e);
+              }}
+            >
+              <img
+                class={`uploaded-image${isProcessing ? " processing" : ""}`}
+                src={catDetectionPreview || imagePreviewUrl}
+                alt={catDetectionPreview
+                  ? "Cat detection preview"
+                  : "Upload preview"}
+              />
+            </button>
+          {:else}
+            <button
+              class="image-upload-dragdrop-area-button"
+              onclick={() => fileInput.click()}
+              ondragover={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+              }}
+              ondragenter={(e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "copy";
+              }}
+              ondragleave={(e) => {
+                e.preventDefault();
+              }}
+              ondrop={(e) => {
+                e.preventDefault();
+                handleFileUpload(e);
+              }}
+              tabindex="0"
+            >
+              {#if hasMounted}
+                <div class="cat-face-svg-wrapper">
+                  <CatFace />
+                </div>
+                {#if navigator.maxTouchPoints > 0}
+                  Tap to take a photo or upload one
+                {:else}
+                  Click or drop your photo here
+                {/if}
               {/if}
-            {/if}
-          </button>
+            </button>
+          {/if}
+        </div>
+        <button
+          class="analyze-button"
+          onclick={processImage}
+          disabled={!imagePreviewUrl || predictionMessage || isProcessing}
+        >
+          {isProcessing ? "Processing..." : "Analyze"}
+        </button>
+      </div>
+
+      <div class="catPainDiagnosis-message-div">
+        {#if predictionMessage}
+          <p>{predictionMessage}</p>
         {/if}
       </div>
-      <button
-        class="analyze-button"
-        onclick={processImage}
-        disabled={!imagePreviewUrl || predictionMessage || isProcessing}
-      >
-        {isProcessing ? "Processing..." : "Analyze"}
-      </button>
-    </div>
-
-    <div class="catPainDiagnosis-message-div">
-      {#if predictionMessage}
-        <p>{predictionMessage}</p>
-      {/if}
-    </div>
+    {/if}
   </div>
 </section>
 
@@ -455,5 +467,33 @@
   .catPainDiagnosis-message-div {
     margin-top: var(--spacing-large);
     margin-bottom: var(--spacing-large);
+  }
+
+  .loading {
+    margin-top: var(--spacing-large);
+    text-align: center;
+    font-size: 18px;
+    color: var(--color-primary);
+  }
+
+  .dots span {
+    opacity: 0;
+    animation: showDot 1.5s infinite;
+  }
+  .dots span:nth-child(2) {
+    animation-delay: 0.5s;
+  }
+  .dots span:nth-child(3) {
+    animation-delay: 1s;
+  }
+
+  @keyframes showDot {
+    0%,
+    100% {
+      opacity: 0;
+    }
+    50% {
+      opacity: 1;
+    }
   }
 </style>
